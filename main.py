@@ -1,17 +1,24 @@
 import os
 import asyncio
+from pathlib import Path
+from contextlib import suppress
 from aiogram import Bot, Dispatcher, Router, F
 from aiogram.types import (
     Message,
     CallbackQuery,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
+    FSInputFile,
 )
 from aiogram.filters import CommandStart
+from aiogram.exceptions import TelegramBadRequest
 
 TOKEN = os.getenv("BOT_TOKEN")
 if not TOKEN:
     raise RuntimeError("BOT_TOKEN is not set")
+
+BASE_DIR = Path(__file__).resolve().parent
+IMAGES_DIR = BASE_DIR / "images"
 
 router = Router()
 
@@ -44,6 +51,42 @@ def back_to_menu_kb() -> InlineKeyboardMarkup:
     )
 
 
+def about_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🧴 Шампуни", callback_data="about_shampoo")],
+            [
+                InlineKeyboardButton(
+                    text="💧 Кондиционеры", callback_data="about_conditioner"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="💜 Маска «уход»", callback_data="about_mask_care"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="💜 Маска «цвет»", callback_data="about_mask_color"
+                )
+            ],
+            [InlineKeyboardButton(text="🔙 Назад в меню", callback_data="menu")],
+        ]
+    )
+
+
+def back_to_about_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔙 Назад в раздел «Обо мне»", callback_data="about"
+                )
+            ]
+        ]
+    )
+
+
 def contacts_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -57,6 +100,11 @@ def contacts_kb() -> InlineKeyboardMarkup:
                     text="💬 Написать в WhatsApp", url="https://wa.me/79531561771"
                 )
             ],
+            [
+                InlineKeyboardButton(
+                    text="🗓 Записаться онлайн", url="https://dikidi.ru/1475778"
+                )
+            ],
             [InlineKeyboardButton(text="🔙 Назад в меню", callback_data="menu")],
         ]
     )
@@ -66,20 +114,23 @@ START_TEXT = (
     "Здравствуйте! Меня зовут Татьяна.\n\n"
     "Я рада приветствовать вас в моем профессиональном пространстве.\n\n"
     "💁‍♀️ Я действующий мастер с более чем 15-летним опытом, парикмахер, колорист и тритментолог.\n"
-    "Моя специализация — здоровье волос на молекулярном уровне и сложные техники окрашивания.\n\n"
+    "Моя специализация — это не просто стрижка, и окрашивание а здоровье волос на молекулярном уровне и сложный цвет в окрашивание.\n"
+    "Постоянно учусь, тестирую новинки и применяю только те составы, которые безопасны и эффективны.\n"
+    "Разбираю продукты по ингредиентам и создаю свой собственный бренд профессионального ухода.\n"
+    "К вашим волосам я подхожу как ученый и как художник.\n\n"
     "📌 Выберите, что вас интересует:"
 )
 
 ABOUT_TEXT = (
     "1️⃣ Обо мне и моём бренде\n\n"
-    "Я не просто крашу или лечу волосы. Я изучаю составы косметики досконально, разбираю продукты по ингредиентам "
-    "и создаю свой собственный бренд профессионального ухода.\n\n"
-    "Полный состав каждого средства можно найти в канале ➡️ https://t.me/TF_TERRA_LIVE\n\n"
-    "✨ ИНДИВИДУАЛЬНЫЙ ПОДБОР УХОДА\n"
-    "Помимо готовых продуктов, я создаю для вас персональный домашний уход: анализирую состояние волос и подбираю компоненты "
-    "под вашу задачу.\n\n"
-    "📩 Хотите приобрести готовые средства или заказать индивидуальный уход?\n"
-    "Пишите мне в личные сообщения — буду рада помочь! 💬"
+    "Всё началось с моей собственной проблемы. У меня очень жирная кожа головы и тонкие волосы, которые требовали мытья буквально через день. "
+    "Я перепробовала десятки шампуней: и масс-маркет, и люксовые, и профессиональные бренды. Но каждый из них либо утяжелял волосы, "
+    "лишая объёма, либо вызывал раздражение, либо просто не решал проблему.\n\n"
+    "Мне хотелось по-настоящему натурального состава, который бережно очищает, не нарушая микробиом кожи головы, "
+    "и при этом даёт объём и лёгкость. Тогда я создала шампунь для себя. Итог превзошёл ожидания: волосы перестали жирниться через день, "
+    "обрели объём и начали расти быстрее.\n\n"
+    "Так родился мой бренд — из любви к себе и желания помочь вам обрести здоровые волосы без компромиссов. 💖\n\n"
+    "👇 Выбери, что тебя интересует:"
 )
 
 COLORING_TEXT = (
@@ -118,56 +169,172 @@ CONTACTS_TEXT = (
     "📍 Адрес: СПб, ул. Кораблестроителей, 34\n"
     "📞 Телефон: +79531561771\n"
     "📱 Telegram / WhatsApp: @tatyana_lilu\n\n"
-    "Для записи напишите мне — и мы подберём удобное время."
+    "🗓 Онлайн-запись: https://dikidi.ru/1475778\n\n"
 )
+
+SHAMPOO_TEXT = (
+    "🧴 Шампуни\n\n"
+    "PRO-WEIGHTLESS COLOR 🫧\n"
+    "«Три решения в одной формуле»\n"
+    "Его инновационная формула работает у корней и по всей длине.\n\n"
+    "Биотехнологичный экстракт клеток оливы пробуждает фолликулы и стимулирует рост более сильных и здоровых волос.\n"
+    "Комплекс жидкого шелка и кератина создает невесомую защитную мембрану вокруг каждого волоска, запечатывая цвет внутри.\n\n"
+    "• Восстанавливает структуру\n"
+    "• Сохраняет цвет и блеск\n"
+    "• Снимает статическое электричество\n"
+    "• Очищает без утяжеления\n"
+    "• Придает упругость и плотность\n"
+    "• Подходит для чувствительной кожи головы и тонких волос"
+)
+
+CONDITIONER_TEXT = (
+    "💧 Кондиционеры\n\n"
+    "• КОМПЛЕКС МАСЕЛ (Ши, Миндальное, Жожоба) И ПРОТЕИНОВ\n"
+    "Восстанавливают липидный баланс, дают сияние без утяжеления.\n\n"
+    "Кондиционер KERATIN CHARGE ⚡\n"
+    "Молекулярная формула кератина и шелка. Интенсивная терапия для сильно поврежденных волос.\n\n"
+    "Как работает состав:\n"
+    "· Глубокое восстановление изнутри: низкомолекулярный кератин и аминокислоты заполняют микроповреждения.\n"
+    "· Мгновенная гладкость и блеск: комплекс протеинов и шелка создает легкую smoothing-пленку.\n"
+    "· Технология 18-MEA: воссоздает естественный защитный барьер и дает термозащиту.\n"
+    "· Интенсивное питание и уплотнение: пантенол, масла и керамиды питают волосы по всей длине."
+)
+
+MASK_CARE_TEXT = (
+    "💜 Маска «уход»\n\n"
+    "COLOR THERAPY\n"
+    "Комплексное молекулярное восстановление.\n"
+    "Интенсивный уход для ослабленных волос.\n\n"
+    "Глубинное восстановление и уплотнение волос.\n"
+    "Элая Ренова в паре с 3 видами кератина «цементирует» микротрещины и уплотняет волокно.\n\n"
+    "Молекулярная формула:\n"
+    "• Элая Ренова (фосфолипиды, церамиды, сфинголипиды)\n"
+    "• Мульти-кератиновый комплекс (3 вида)\n"
+    "• Аминокислоты шелка + комплекс протеинов\n"
+    "• Комплекс питательных масел (жожоба и др.)\n"
+    "• Инновационные комплексы (CML Complex, Треалекс)"
+)
+
+MASK_COLOR_TEXT = (
+    "💜 Маска «цвет»\n\n"
+    "VITAL REPAIR\n"
+    "Липидно-протеиновая маска с защитой цвета и структуры.\n"
+    "Формула работает на трех уровнях: защищает пигмент, уплотняет структуру, создает термобарьер.\n\n"
+    "Научная формула:\n"
+    "• Гидролизованный кератин (низкая молекулярная масса)\n"
+    "• 18-MEA комплекс\n"
+    "• Комплекс масел (Ши, Миндальное, Жожоба) и протеинов\n\n"
+    "📩 Хотите попробовать мои средства или заказать индивидуальный уход?\n"
+    "Пишите в личные сообщения: https://t.me/tatyana_lilu\n"
+    "+7 953 156 1771 | @tatyana_lilu"
+)
+
+
+def photo(filename: str) -> FSInputFile:
+    return FSInputFile(IMAGES_DIR / filename)
+
+
+async def safe_delete_message(call: CallbackQuery) -> None:
+    with suppress(TelegramBadRequest):
+        if call.message is None:
+            return
+        await call.message.delete()
+
+
+async def replace_with_photo_section(
+    call: CallbackQuery, text: str, image_path: str, reply_markup: InlineKeyboardMarkup
+):
+    if call.message is None:
+        return
+    await safe_delete_message(call)
+    await call.message.answer_photo(
+        photo(image_path), caption=text, reply_markup=reply_markup
+    )
+
+
+async def replace_with_text_section(
+    call: CallbackQuery, text: str, reply_markup: InlineKeyboardMarkup
+):
+    if call.message is None:
+        return
+    await safe_delete_message(call)
+    await call.message.answer(text, reply_markup=reply_markup)
 
 
 @router.message(CommandStart())
 async def start(message: Message):
-    await message.answer(START_TEXT, reply_markup=main_menu_kb())
+    await message.answer_photo(
+        photo("main.jpeg"), caption=START_TEXT, reply_markup=main_menu_kb()
+    )
 
 
 @router.callback_query(F.data == "menu")
 async def menu(call: CallbackQuery):
-    await call.message.edit_text(START_TEXT, reply_markup=main_menu_kb())
+    await replace_with_photo_section(
+        call, START_TEXT, "main.jpeg", main_menu_kb()
+    )
     await call.answer()
 
 
 @router.callback_query(F.data == "about")
 async def about(call: CallbackQuery):
-    await call.message.edit_text(ABOUT_TEXT, reply_markup=back_to_menu_kb())
+    await replace_with_photo_section(call, ABOUT_TEXT, "about.jpeg", about_kb())
     await call.answer()
 
 
 @router.callback_query(F.data == "coloring")
 async def coloring(call: CallbackQuery):
-    await call.message.edit_text(COLORING_TEXT, reply_markup=back_to_menu_kb())
+    await replace_with_text_section(call, COLORING_TEXT, back_to_menu_kb())
     await call.answer()
 
 
 @router.callback_query(F.data == "cuts")
 async def cuts(call: CallbackQuery):
-    await call.message.edit_text(CUTS_TEXT, reply_markup=back_to_menu_kb())
+    await replace_with_text_section(call, CUTS_TEXT, back_to_menu_kb())
     await call.answer()
 
 
 @router.callback_query(F.data == "treatment")
 async def treatment(call: CallbackQuery):
-    await call.message.edit_text(TREATMENT_TEXT, reply_markup=back_to_menu_kb())
+    await replace_with_text_section(call, TREATMENT_TEXT, back_to_menu_kb())
     await call.answer()
 
 
 @router.callback_query(F.data == "contacts")
 async def contacts(call: CallbackQuery):
-    await call.message.edit_text(CONTACTS_TEXT, reply_markup=contacts_kb())
+    await replace_with_text_section(call, CONTACTS_TEXT, contacts_kb())
+    await call.answer()
+
+
+@router.callback_query(F.data == "about_shampoo")
+async def about_shampoo(call: CallbackQuery):
+    await replace_with_text_section(call, SHAMPOO_TEXT, back_to_about_kb())
+    await call.answer()
+
+
+@router.callback_query(F.data == "about_conditioner")
+async def about_conditioner(call: CallbackQuery):
+    await replace_with_text_section(call, CONDITIONER_TEXT, back_to_about_kb())
+    await call.answer()
+
+
+@router.callback_query(F.data == "about_mask_care")
+async def about_mask_care(call: CallbackQuery):
+    await replace_with_text_section(call, MASK_CARE_TEXT, back_to_about_kb())
+    await call.answer()
+
+
+@router.callback_query(F.data == "about_mask_color")
+async def about_mask_color(call: CallbackQuery):
+    await replace_with_text_section(call, MASK_COLOR_TEXT, back_to_about_kb())
     await call.answer()
 
 
 async def main():
-    bot = Bot(TOKEN)
-    dp = Dispatcher()
-    dp.include_router(router)
-    await dp.start_polling(bot)
+    async with Bot(TOKEN) as bot:
+        dp = Dispatcher()
+        dp.include_router(router)
+        await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
