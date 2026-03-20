@@ -29,6 +29,19 @@ def back_to_menu_kb() -> InlineKeyboardMarkup:
     )
 
 
+def back_to_menu_and_contacts_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="5️⃣ Записаться / Контакты", callback_data="contacts"
+                )
+            ],
+            [InlineKeyboardButton(text="🔙 Назад в меню", callback_data="menu")],
+        ]
+    )
+
+
 def about_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -61,6 +74,23 @@ def back_to_about_kb() -> InlineKeyboardMarkup:
                     text="🔙 Назад в раздел «Обо мне»", callback_data="about"
                 )
             ]
+        ]
+    )
+
+
+def back_to_about_and_contacts_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="5️⃣ Записаться / Контакты", callback_data="contacts"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔙 Назад в раздел «Обо мне»", callback_data="about"
+                )
+            ],
         ]
     )
 

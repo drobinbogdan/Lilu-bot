@@ -5,8 +5,10 @@ from aiogram.types import Message, CallbackQuery
 from keyboards import (
     main_menu_kb,
     back_to_menu_kb,
+    back_to_menu_and_contacts_kb,
     about_kb,
     back_to_about_kb,
+    back_to_about_and_contacts_kb,
     contacts_kb,
 )
 from texts import (
@@ -49,19 +51,19 @@ async def about(call: CallbackQuery):
 
 @router.callback_query(F.data == "coloring")
 async def coloring(call: CallbackQuery):
-    await replace_with_text_section(call, COLORING_TEXT, back_to_menu_kb())
+    await replace_with_text_section(call, COLORING_TEXT, back_to_menu_and_contacts_kb())
     await call.answer()
 
 
 @router.callback_query(F.data == "cuts")
 async def cuts(call: CallbackQuery):
-    await replace_with_text_section(call, CUTS_TEXT, back_to_menu_kb())
+    await replace_with_text_section(call, CUTS_TEXT, back_to_menu_and_contacts_kb())
     await call.answer()
 
 
 @router.callback_query(F.data == "treatment")
 async def treatment(call: CallbackQuery):
-    await replace_with_text_section(call, TREATMENT_TEXT, back_to_menu_kb())
+    await replace_with_text_section(call, TREATMENT_TEXT, back_to_menu_and_contacts_kb())
     await call.answer()
 
 
@@ -73,23 +75,31 @@ async def contacts(call: CallbackQuery):
 
 @router.callback_query(F.data == "about_shampoo")
 async def about_shampoo(call: CallbackQuery):
-    await replace_with_text_section(call, SHAMPOO_TEXT, back_to_about_kb())
+    await replace_with_photo_section(
+        call, SHAMPOO_TEXT, "shampoo.jpeg", back_to_about_and_contacts_kb()
+    )
     await call.answer()
 
 
 @router.callback_query(F.data == "about_conditioner")
 async def about_conditioner(call: CallbackQuery):
-    await replace_with_text_section(call, CONDITIONER_TEXT, back_to_about_kb())
+    await replace_with_photo_section(
+        call, CONDITIONER_TEXT, "conditioner.jpeg", back_to_about_and_contacts_kb()
+    )
     await call.answer()
 
 
 @router.callback_query(F.data == "about_mask_care")
 async def about_mask_care(call: CallbackQuery):
-    await replace_with_text_section(call, MASK_CARE_TEXT, back_to_about_kb())
+    await replace_with_photo_section(
+        call, MASK_CARE_TEXT, "mask_care.jpeg", back_to_about_and_contacts_kb()
+    )
     await call.answer()
 
 
 @router.callback_query(F.data == "about_mask_color")
 async def about_mask_color(call: CallbackQuery):
-    await replace_with_text_section(call, MASK_COLOR_TEXT, back_to_about_kb())
+    await replace_with_photo_section(
+        call, MASK_COLOR_TEXT, "mask_color.jpeg", back_to_about_and_contacts_kb()
+    )
     await call.answer()

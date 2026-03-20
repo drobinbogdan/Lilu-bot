@@ -1,7 +1,7 @@
 from pathlib import Path
 import os
 
-TOKEN = os.getenv("TOKEN")
+TOKEN = os.getenv("BOT_TOKEN")
 if not TOKEN:
     raise RuntimeError("TOKEN is not set")
 
