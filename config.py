@@ -1,6 +1,7 @@
 from pathlib import Path
+import os
 
-TOKEN = "8619177224:AAELsPNHGaebNth9LXTjHh3Y5winjvCWarQ"
+TOKEN = os.getenv("TOKEN")
 if not TOKEN:
     raise RuntimeError("TOKEN is not set")
 
